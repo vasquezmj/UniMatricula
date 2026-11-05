@@ -1,0 +1,49 @@
+@model CursoFormViewModel
+<div class="row g-3">
+    <div class="col-md-4">
+        <label asp-for="Codigo" class="form-label"></label>
+        <input asp-for="Codigo" class="form-control" />
+        <span asp-validation-for="Codigo" class="text-danger"></span>
+    </div>
+    <div class="col-md-8">
+        <label asp-for="Nombre" class="form-label"></label>
+        <input asp-for="Nombre" class="form-control" />
+        <span asp-validation-for="Nombre" class="text-danger"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="Creditos" class="form-label"></label>
+        <input asp-for="Creditos" type="number" class="form-control" />
+        <span asp-validation-for="Creditos" class="text-danger"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="Tipo" class="form-label"></label>
+        <select asp-for="Tipo" asp-items="(IEnumerable<SelectListItem>)ViewBag.Tipos" class="form-select"></select>
+        <span asp-validation-for="Tipo" class="text-danger"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="Cupos" class="form-label"></label>
+        <input asp-for="Cupos" type="number" class="form-control" />
+        <span asp-validation-for="Cupos" class="text-danger"></span>
+    </div>
+    <div class="col-12">
+        <label asp-for="DocenteId" class="form-label"></label>
+        <select asp-for="DocenteId" asp-items="(IEnumerable<SelectListItem>)ViewBag.Docentes" class="form-select">
+            <option value="">Sin docente asignado</option>
+        </select>
+    </div>
+    <div class="col-12">
+        <label class="form-label">Carreras a las que pertenece el curso</label>
+        <div class="row">
+        @foreach (var carrera in (List<Carrera>)ViewBag.Carreras)
+        {
+            <div class="col-md-6">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="CarreraIds" value="@carrera.Id" id="carrera_@carrera.Id"
+                           checked="@Model.CarreraIds.Contains(carrera.Id)" />
+                    <label class="form-check-label" for="carrera_@carrera.Id">@carrera.Nombre</label>
+                </div>
+            </div>
+        }
+        </div>
+    </div>
+</div>

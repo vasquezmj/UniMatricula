@@ -1,0 +1,56 @@
+@model List<CursoDisponibleViewModel>
+@{ ViewData["Title"] = "Matrícula"; }
+<h1 class="page-title">Cursos disponibles</h1>
+<p class="text-muted">Carrera: <strong>@ViewBag.Carrera</strong></p>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-4"><input name="q" value="@ViewBag.Q" class="form-control" placeholder="Buscar curso o código…" /></div>
+    <div class="col-md-2">
+        <select name="creditos" class="form-select">
+            <option value="">Créditos</option>
+            @foreach (var n in new[] { 1, 2, 3, 4, 5, 6 })
+            {
+                <option value="@n" selected="@(ViewBag.Creditos == n)">@n</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select name="tipo" class="form-select">
+            <option value="">Tipo</option>
+            <option value="Obligatorio" selected="@(ViewBag.Tipo == "Obligatorio")">Obligatorio</option>
+            <option value="Electivo" selected="@(ViewBag.Tipo == "Electivo")">Electivo</option>
+        </select>
+    </div>
+    <div class="col-md-4">
+        <button class="btn btn-primary">Filtrar</button>
+        <a class="btn btn-outline-secondary" asp-action="Index">Limpiar</a>
+    </div>
+</form>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">No hay cursos disponibles con esos criterios.</div>
+}
+else
+{
+    <form asp-action="Confirmar" method="post">
+        <table class="table table-hover align-middle bg-white">
+            <thead><tr><th></th><th>Código</th><th>Curso</th><th>Créditos</th><th>Tipo</th><th>Docente</th><th>Cupos</th></tr></thead>
+            <tbody>
+            @foreach (var c in Model)
+            {
+                <tr class="@(c.CuposDisponibles <= 0 ? "table-light text-muted" : "")">
+                    <td><input type="checkbox" name="cursoIds" value="@c.Id" class="form-check-input" disabled="@(c.CuposDisponibles <= 0)" /></td>
+                    <td>@c.Codigo</td>
+                    <td>@c.Nombre</td>
+                    <td>@c.Creditos</td>
+                    <td>@c.Tipo</td>
+                    <td>@(c.Docente ?? "Por asignar")</td>
+                    <td>@(c.CuposDisponibles <= 0 ? "Sin cupos" : c.CuposDisponibles.ToString())</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+        <button type="submit" class="btn btn-accent">Confirmar matrícula</button>
+    </form>
+}

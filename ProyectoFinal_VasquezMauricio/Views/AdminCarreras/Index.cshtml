@@ -1,0 +1,27 @@
+@model List<Carrera>
+@{ ViewData["Title"] = "Carreras"; }
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="page-title mb-0">Carreras</h1>
+    <a class="btn btn-accent" asp-action="Create">+ Nueva carrera</a>
+</div>
+<table class="table align-middle bg-white">
+    <thead><tr><th>Carrera</th><th>Descripción</th><th>Cursos</th><th>Estudiantes</th><th>Estado</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var c in Model)
+    {
+        <tr>
+            <td>@c.Nombre</td>
+            <td>@c.Descripcion</td>
+            <td>@c.CarreraCursos.Count</td>
+            <td>@c.Estudiantes.Count</td>
+            <td>@(c.Activa ? "Activa" : "Inactiva")</td>
+            <td class="text-end">
+                <a class="btn btn-outline-primary btn-sm" asp-action="Edit" asp-route-id="@c.Id">Editar</a>
+                <form asp-action="Delete" asp-route-id="@c.Id" method="post" class="d-inline" onsubmit="return confirm('¿Eliminar esta carrera?');">
+                    <button class="btn btn-outline-danger btn-sm">Eliminar</button>
+                </form>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

@@ -1,0 +1,31 @@
+@model List<Matricula>
+@{ ViewData["Title"] = "Mis cursos"; }
+<h1 class="page-title">Mis cursos matriculados</h1>
+@if (!Model.Any())
+{
+    <div class="alert alert-info">Aún no tienes cursos matriculados. <a asp-action="Index">Ir a matrícula</a></div>
+}
+else
+{
+    <table class="table align-middle bg-white">
+        <thead><tr><th>Código</th><th>Curso</th><th>Docente</th><th>Créditos</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var m in Model)
+        {
+            <tr>
+                <td>@m.Curso!.Codigo</td>
+                <td>@m.Curso.Nombre</td>
+                <td>@(m.Curso.Docente?.Nombre ?? "Por asignar")</td>
+                <td>@m.Curso.Creditos</td>
+                <td class="text-end">
+                    <form asp-action="Retirar" asp-route-id="@m.Id" method="post" onsubmit="return confirm('¿Retirar este curso?');">
+                        <button class="btn btn-outline-danger btn-sm">Retirar</button>
+                    </form>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+    <p class="fw-bold">Total: @Model.Count cursos · @Model.Sum(m => m.Curso!.Creditos) créditos</p>
+    <a class="btn btn-primary" asp-action="Index">Matricular más cursos</a>
+}
