@@ -32,8 +32,25 @@ public class MatriculaController : Controller
             return RedirectToAction("Index", "Carreras");
         }
 
+        var cursos = await ObtenerCursosDisponiblesAsync(userId, user.CarreraId.Value, q, creditos, tipo);
+
+        if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+        {
+            return Json(cursos);
+        }
+
+        ViewBag.Carrera = user.Carrera!.Nombre;
+        ViewBag.Q = q;
+        ViewBag.Creditos = creditos;
+        ViewBag.Tipo = tipo;
+        return View(cursos);
+    }
+
+    private async Task<List<CursoDisponibleViewModel>> ObtenerCursosDisponiblesAsync(
+        string userId, int carreraId, string? q, int? creditos, string? tipo)
+    {
         var query = _db.Cursos
-            .Where(c => c.CarreraCursos.Any(cc => cc.CarreraId == user.CarreraId))
+            .Where(c => c.CarreraCursos.Any(cc => cc.CarreraId == carreraId))
             .Where(c => !c.Matriculas.Any(m => m.EstudianteId == userId));
 
         if (!string.IsNullOrWhiteSpace(q))
@@ -43,7 +60,7 @@ public class MatriculaController : Controller
         if (!string.IsNullOrWhiteSpace(tipo))
             query = query.Where(c => c.Tipo == tipo);
 
-        var cursos = await query.OrderBy(c => c.Codigo)
+        return await query.OrderBy(c => c.Codigo)
             .Select(c => new CursoDisponibleViewModel
             {
                 Id = c.Id,
@@ -52,14 +69,8 @@ public class MatriculaController : Controller
                 Creditos = c.Creditos,
                 Tipo = c.Tipo,
                 Docente = c.Docente != null ? c.Docente.Nombre : null,
-                CuposDisponibles = c.Cupos - c.Matriculas.Count
+                CuposDisponibles = Math.Max(0, c.Cupos - c.Matriculas.Count)
             }).ToListAsync();
-
-        ViewBag.Carrera = user.Carrera!.Nombre;
-        ViewBag.Q = q;
-        ViewBag.Creditos = creditos;
-        ViewBag.Tipo = tipo;
-        return View(cursos);
     }
 
     [HttpPost, ValidateAntiForgeryToken]
@@ -82,6 +93,7 @@ public class MatriculaController : Controller
 
         var errores = new List<string>();
         var nuevos = new List<Matricula>();
+        var totalCreditos = 0;
 
         foreach (var curso in cursos)
         {
@@ -92,7 +104,10 @@ public class MatriculaController : Controller
             else if (curso.Cupos - curso.Matriculas.Count <= 0)
                 errores.Add($"{curso.Codigo} no tiene cupos disponibles.");
             else
+            {
                 nuevos.Add(new Matricula { EstudianteId = userId, CursoId = curso.Id, FechaMatricula = DateTime.Now });
+                totalCreditos += curso.Creditos;
+            }
         }
 
         if (errores.Count > 0)
@@ -103,7 +118,7 @@ public class MatriculaController : Controller
 
         _db.Matriculas.AddRange(nuevos);
         await _db.SaveChangesAsync();
-        TempData["Ok"] = $"¡Matrícula confirmada! Se inscribieron {nuevos.Count} curso(s).";
+        TempData["Ok"] = $"✓  ¡Matrícula confirmada! Se inscribieron {nuevos.Count} cursos ({totalCreditos} créditos).";
         return RedirectToAction(nameof(MisCursos));
     }
 

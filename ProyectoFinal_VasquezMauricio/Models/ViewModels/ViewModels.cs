@@ -58,10 +58,12 @@ public class LoginViewModel
 
 public class EstudiantePanelViewModel
 {
+    public string Nombre { get; set; } = string.Empty;
     public string NombreCompleto { get; set; } = string.Empty;
     public string? Carrera { get; set; }
     public int Creditos { get; set; }
     public int Cursos { get; set; }
+    public string Periodo { get; set; } = "III-2026";
 }
 
 public class CarreraItemViewModel
@@ -71,6 +73,7 @@ public class CarreraItemViewModel
     public string Descripcion { get; set; } = string.Empty;
     public int CantidadCursos { get; set; }
     public bool Seleccionada { get; set; }
+    public string Inicial => string.IsNullOrWhiteSpace(Nombre) ? "U" : Nombre.Trim()[0].ToString().ToUpper();
 }
 
 public class CursoDisponibleViewModel
@@ -114,6 +117,13 @@ public class CursoFormViewModel
     public List<int> CarreraIds { get; set; } = new();
 }
 
+public class UltimaMatriculaViewModel
+{
+    public string Estudiante { get; set; } = string.Empty;
+    public string Curso { get; set; } = string.Empty;
+    public DateTime Fecha { get; set; }
+}
+
 public class DashboardAdminViewModel
 {
     public int Estudiantes { get; set; }
@@ -121,4 +131,5 @@ public class DashboardAdminViewModel
     public int Cursos { get; set; }
     public int Docentes { get; set; }
     public int Matriculas { get; set; }
+    public List<UltimaMatriculaViewModel> UltimasMatriculas { get; set; } = new();
 }

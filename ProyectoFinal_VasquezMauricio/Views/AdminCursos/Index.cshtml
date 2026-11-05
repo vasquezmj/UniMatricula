@@ -1,67 +1,211 @@
 @model List<Curso>
-@{ ViewData["Title"] = "Cursos"; int pagina = ViewBag.Pagina; int total = ViewBag.TotalPaginas; }
+@{
+    ViewData["Title"] = "Cursos";
+    int pagina = ViewBag.Pagina;
+    int total = ViewBag.TotalPaginas;
+    var carreras = (List<Carrera>)ViewBag.Carreras;
+    int totalCarreras = ViewBag.TotalCarreras ?? carreras.Count;
+}
+
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="page-title mb-0">Cursos</h1>
+    <h1 class="page-title h3 mb-0">Cursos</h1>
     <a class="btn btn-accent" asp-action="Create">+ Nuevo curso</a>
 </div>
-<form method="get" class="row g-2 mb-3">
-    <div class="col-md-4"><input name="q" value="@ViewBag.Q" class="form-control" placeholder="Buscar curso o código…" /></div>
-    <div class="col-md-2">
-        <select name="creditos" class="form-select">
-            <option value="">Créditos</option>
-            @foreach (var n in new[] { 1, 2, 3, 4, 5, 6 })
-            {
-                <option value="@n" selected="@(ViewBag.Creditos == n)">@n</option>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <form method="get" class="row g-2 mb-3">
+            <div class="col-md-4">
+                <input name="q" value="@ViewBag.Q" class="form-control" placeholder="Buscar…" />
+            </div>
+            <div class="col-md-3">
+                <select name="creditos" class="form-select" onchange="this.form.submit()">
+                    <option value="">Créditos</option>
+                    @foreach (var n in new[] { 1, 2, 3, 4, 5, 6 })
+                    {
+                        <option value="@n" selected="@(ViewBag.Creditos == n)">@n créditos</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="tipo" class="form-select" onchange="this.form.submit()">
+                    <option value="">Tipo</option>
+                    <option value="Obligatorio" selected="@(ViewBag.Tipo == "Obligatorio")">Obligatorio</option>
+                    <option value="Electivo" selected="@(ViewBag.Tipo == "Electivo")">Electivo</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button class="btn btn-primary w-100">Filtrar</button>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table align-middle bg-white border mb-2">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Curso</th>
+                        <th>Cr.</th>
+                        <th>Tipo</th>
+                        <th>Carreras</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">No se encontraron cursos.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var c in Model)
+                    {
+                        string textoCarreras;
+                        if (!c.CarreraCursos.Any())
+                        {
+                            textoCarreras = "—";
+                        }
+                        else if (totalCarreras > 0 && c.CarreraCursos.Count >= totalCarreras)
+                        {
+                            textoCarreras = "Todas";
+                        }
+                        else
+                        {
+                            textoCarreras = string.Join(", ", c.CarreraCursos.Select(cc => cc.Carrera!.Nombre.Replace("Ingeniería en ", "").Replace(" de Empresas", "").Replace(" Pública", "")));
+                        }
+                        <tr>
+                            <td class="fw-semibold">@c.Codigo</td>
+                            <td>@c.Nombre</td>
+                            <td>@c.Creditos</td>
+                            <td>@c.Tipo</td>
+                            <td class="small">@textoCarreras</td>
+                            <td class="text-end text-nowrap">
+                                <a class="btn btn-outline-primary btn-sm" asp-action="Edit" asp-route-id="@c.Id">Editar</a>
+                                <form asp-action="Delete" asp-route-id="@c.Id" method="post" class="d-inline" onsubmit="return confirm('¿Eliminar este curso?');">
+                                    <button class="btn btn-outline-danger btn-sm">Eliminar</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="d-flex align-items-center justify-content-between mt-2">
+            <nav aria-label="Paginación de cursos">
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item @(pagina <= 1 ? "disabled" : "")">
+                        <a class="page-link" asp-action="Index" asp-route-q="@ViewBag.Q" asp-route-creditos="@ViewBag.Creditos" asp-route-tipo="@ViewBag.Tipo" asp-route-pagina="@(pagina - 1)">‹</a>
+                    </li>
+                    @for (int i = 1; i <= total; i++)
+                    {
+                        <li class="page-item @(i == pagina ? "active" : "")">
+                            <a class="page-link" asp-action="Index" asp-route-q="@ViewBag.Q" asp-route-creditos="@ViewBag.Creditos" asp-route-tipo="@ViewBag.Tipo" asp-route-pagina="@i">@i</a>
+                        </li>
+                    }
+                    <li class="page-item @(pagina >= total ? "disabled" : "")">
+                        <a class="page-link" asp-action="Index" asp-route-q="@ViewBag.Q" asp-route-creditos="@ViewBag.Creditos" asp-route-tipo="@ViewBag.Tipo" asp-route-pagina="@(pagina + 1)">›</a>
+                    </li>
+                </ul>
+            </nav>
+            <span class="ajax-hint">Paginación para listas largas</span>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card p-4 resumen-card">
+            <h2 class="h5 fw-bold page-title mb-3">Asociar cursos a una carrera</h2>
+            <form id="formAsociar" onsubmit="return false;">
+                @Html.AntiForgeryToken()
+                <div class="mb-3">
+                    <label for="selCarreraAsoc" class="form-label fw-semibold">Carrera</label>
+                    <select id="selCarreraAsoc" class="form-select">
+                        @foreach (var car in carreras)
+                        {
+                            <option value="@car.Id">@car.Nombre</option>
+                        }
+                    </select>
+                </div>
+
+                <div id="chipsCursos" class="d-flex flex-wrap gap-2 mb-3"></div>
+
+                <div class="d-flex gap-2">
+                    <select id="selCursoAgregar" class="form-select">
+                        <option value="">Agregar curso…</option>
+                    </select>
+                    <button type="button" id="btnAgregarCursoCarrera" class="btn btn-primary">Agregar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    (function () {
+        const selCarrera = document.getElementById('selCarreraAsoc');
+        const chipsDiv = document.getElementById('chipsCursos');
+        const selAgregar = document.getElementById('selCursoAgregar');
+        const btnAgregar = document.getElementById('btnAgregarCursoCarrera');
+        const token = document.querySelector('#formAsociar input[name="__RequestVerificationToken"]').value;
+
+        function renderAsociacion(data) {
+            chipsDiv.innerHTML = '';
+            if (data.asociados.length === 0) {
+                chipsDiv.innerHTML = '<span class="text-muted small">Sin cursos asociados.</span>';
+            } else {
+                data.asociados.forEach(c => {
+                    const span = document.createElement('span');
+                    span.className = 'course-chip';
+                    span.innerHTML = `${c.nombre} <button type="button" data-id="${c.id}" title="Quitar">✕</button>`;
+                    span.querySelector('button').addEventListener('click', () => desasociar(c.id));
+                    chipsDiv.appendChild(span);
+                });
             }
-        </select>
-    </div>
-    <div class="col-md-2">
-        <select name="tipo" class="form-select">
-            <option value="">Tipo</option>
-            <option value="Obligatorio" selected="@(ViewBag.Tipo == "Obligatorio")">Obligatorio</option>
-            <option value="Electivo" selected="@(ViewBag.Tipo == "Electivo")">Electivo</option>
-        </select>
-    </div>
-    <div class="col-md-4">
-        <button class="btn btn-primary">Filtrar</button>
-        <a class="btn btn-outline-secondary" asp-action="Index">Limpiar</a>
-    </div>
-</form>
-<table class="table align-middle bg-white">
-    <thead><tr><th>Código</th><th>Curso</th><th>Créd.</th><th>Tipo</th><th>Cupos</th><th>Docente</th><th>Carreras</th><th></th></tr></thead>
-    <tbody>
-    @foreach (var c in Model)
-    {
-        <tr>
-            <td>@c.Codigo</td>
-            <td>@c.Nombre</td>
-            <td>@c.Creditos</td>
-            <td>@c.Tipo</td>
-            <td>@c.Cupos</td>
-            <td>@(c.Docente?.Nombre ?? "—")</td>
-            <td>@(c.CarreraCursos.Any() ? string.Join(", ", c.CarreraCursos.Select(cc => cc.Carrera!.Nombre)) : "—")</td>
-            <td class="text-end text-nowrap">
-                <a class="btn btn-outline-primary btn-sm" asp-action="Edit" asp-route-id="@c.Id">Editar</a>
-                <form asp-action="Delete" asp-route-id="@c.Id" method="post" class="d-inline" onsubmit="return confirm('¿Eliminar este curso?');">
-                    <button class="btn btn-outline-danger btn-sm">Eliminar</button>
-                </form>
-            </td>
-        </tr>
-    }
-    </tbody>
-</table>
-@if (!Model.Any())
-{
-    <div class="alert alert-info">No se encontraron cursos.</div>
-}
-@if (total > 1)
-{
-    <nav><ul class="pagination">
-        @for (int i = 1; i <= total; i++)
-        {
-            <li class="page-item @(i == pagina ? "active" : "")">
-                <a class="page-link" asp-action="Index" asp-route-q="@ViewBag.Q" asp-route-creditos="@ViewBag.Creditos" asp-route-tipo="@ViewBag.Tipo" asp-route-pagina="@i">@i</a>
-            </li>
+
+            selAgregar.innerHTML = '<option value="">Agregar curso…</option>';
+            data.disponibles.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = `${c.codigo} - ${c.nombre}`;
+                selAgregar.appendChild(opt);
+            });
         }
-    </ul></nav>
+
+        async function cargarPorCarrera() {
+            if (!selCarrera.value) return;
+            const res = await fetch(`/Admin/Cursos/PorCarrera/${selCarrera.value}`);
+            if (res.ok) renderAsociacion(await res.json());
+        }
+
+        async function asociar() {
+            const carreraId = selCarrera.value;
+            const cursoId = selAgregar.value;
+            if (!carreraId || !cursoId) return;
+            const fd = new FormData();
+            fd.append('__RequestVerificationToken', token);
+            fd.append('carreraId', carreraId);
+            fd.append('cursoId', cursoId);
+            const res = await fetch('/Admin/Cursos/AsociarCarrera', { method: 'POST', body: fd });
+            if (res.ok) renderAsociacion(await res.json());
+        }
+
+        async function desasociar(cursoId) {
+            const carreraId = selCarrera.value;
+            const fd = new FormData();
+            fd.append('__RequestVerificationToken', token);
+            fd.append('carreraId', carreraId);
+            fd.append('cursoId', cursoId);
+            const res = await fetch('/Admin/Cursos/DesasociarCarrera', { method: 'POST', body: fd });
+            if (res.ok) renderAsociacion(await res.json());
+        }
+
+        selCarrera.addEventListener('change', cargarPorCarrera);
+        btnAgregar.addEventListener('click', asociar);
+        cargarPorCarrera();
+    })();
+</script>
 }

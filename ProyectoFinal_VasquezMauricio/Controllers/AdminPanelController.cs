@@ -23,13 +23,28 @@ public class AdminPanelController : Controller
                                  where r.Name == "Estudiante"
                                  select u.Id).CountAsync();
 
+        var ultimas = await _db.Matriculas
+            .Include(m => m.Estudiante)
+            .Include(m => m.Curso)
+            .OrderByDescending(m => m.FechaMatricula)
+            .ThenByDescending(m => m.Id)
+            .Take(8)
+            .Select(m => new UltimaMatriculaViewModel
+            {
+                Estudiante = m.Estudiante != null ? (m.Estudiante.Nombre + " " + m.Estudiante.Apellidos).Trim() : "Estudiante",
+                Curso = m.Curso != null ? m.Curso.Nombre : "Curso",
+                Fecha = m.FechaMatricula
+            })
+            .ToListAsync();
+
         return View(new DashboardAdminViewModel
         {
             Estudiantes = estudiantes,
             Carreras = await _db.Carreras.CountAsync(),
             Cursos = await _db.Cursos.CountAsync(),
             Docentes = await _db.Docentes.CountAsync(),
-            Matriculas = await _db.Matriculas.CountAsync()
+            Matriculas = await _db.Matriculas.CountAsync(),
+            UltimasMatriculas = ultimas
         });
     }
 }

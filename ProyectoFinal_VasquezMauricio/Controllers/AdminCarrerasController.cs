@@ -25,6 +25,68 @@ public class AdminCarrerasController : Controller
         return View(carreras);
     }
 
+    [HttpGet("ListaJson")]
+    public async Task<IActionResult> ListaJson()
+    {
+        var items = await _db.Carreras
+            .OrderBy(c => c.Nombre)
+            .Select(c => new
+            {
+                id = c.Id,
+                nombre = c.Nombre,
+                descripcion = c.Descripcion,
+                cursos = c.CarreraCursos.Count,
+                estudiantes = c.Estudiantes.Count,
+                activa = c.Activa
+            })
+            .ToListAsync();
+        return Json(items);
+    }
+
+    [HttpPost("GuardarAjax"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> GuardarAjax([FromForm] int id, [FromForm] string nombre, [FromForm] string descripcion)
+    {
+        nombre = (nombre ?? string.Empty).Trim();
+        descripcion = (descripcion ?? string.Empty).Trim();
+
+        if (string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(descripcion))
+            return BadRequest(new { ok = false, mensaje = "El nombre y la descripción son obligatorios." });
+
+        if (await _db.Carreras.AnyAsync(c => c.Nombre == nombre && c.Id != id))
+            return BadRequest(new { ok = false, mensaje = "Ya existe una carrera con ese nombre." });
+
+        if (id == 0)
+        {
+            var nueva = new Carrera { Nombre = nombre, Descripcion = descripcion, Activa = true };
+            _db.Carreras.Add(nueva);
+            await _db.SaveChangesAsync();
+            return Json(new { ok = true, mensaje = "Carrera creada correctamente." });
+        }
+        else
+        {
+            var actual = await _db.Carreras.FindAsync(id);
+            if (actual == null) return NotFound(new { ok = false, mensaje = "Carrera no encontrada." });
+            actual.Nombre = nombre;
+            actual.Descripcion = descripcion;
+            await _db.SaveChangesAsync();
+            return Json(new { ok = true, mensaje = "Carrera actualizada correctamente." });
+        }
+    }
+
+    [HttpPost("EliminarAjax/{id:int}"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> EliminarAjax(int id)
+    {
+        var carrera = await _db.Carreras.Include(c => c.Estudiantes).FirstOrDefaultAsync(c => c.Id == id);
+        if (carrera == null) return NotFound(new { ok = false, mensaje = "Carrera no encontrada." });
+
+        if (carrera.Estudiantes.Count > 0)
+            return BadRequest(new { ok = false, mensaje = "Una carrera con estudiantes no puede eliminarse." });
+
+        _db.Carreras.Remove(carrera);
+        await _db.SaveChangesAsync();
+        return Json(new { ok = true, mensaje = "Carrera eliminada correctamente." });
+    }
+
     [HttpGet("Create")]
     public IActionResult Create() => View(new Carrera());
 

@@ -39,12 +39,60 @@ public class AdminCursosController : Controller
             .Skip((pagina - 1) * TamanoPagina).Take(TamanoPagina)
             .ToListAsync();
 
+        var carreras = await _db.Carreras.OrderBy(c => c.Nombre).ToListAsync();
+
         ViewBag.Q = q;
         ViewBag.Creditos = creditos;
         ViewBag.Tipo = tipo;
         ViewBag.Pagina = pagina;
         ViewBag.TotalPaginas = totalPaginas;
+        ViewBag.Carreras = carreras;
+        ViewBag.TotalCarreras = carreras.Count;
         return View(cursos);
+    }
+
+    [HttpGet("PorCarrera/{carreraId:int}")]
+    public async Task<IActionResult> PorCarrera(int carreraId)
+    {
+        var todos = await _db.Cursos
+            .Include(c => c.CarreraCursos)
+            .OrderBy(c => c.Codigo)
+            .ToListAsync();
+
+        var asociados = todos
+            .Where(c => c.CarreraCursos.Any(cc => cc.CarreraId == carreraId))
+            .Select(c => new { id = c.Id, codigo = c.Codigo, nombre = c.Nombre })
+            .ToList();
+
+        var disponibles = todos
+            .Where(c => !c.CarreraCursos.Any(cc => cc.CarreraId == carreraId))
+            .Select(c => new { id = c.Id, codigo = c.Codigo, nombre = c.Nombre })
+            .ToList();
+
+        return Json(new { asociados, disponibles });
+    }
+
+    [HttpPost("AsociarCarrera"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> AsociarCarrera([FromForm] int carreraId, [FromForm] int cursoId)
+    {
+        if (!await _db.CarreraCursos.AnyAsync(cc => cc.CarreraId == carreraId && cc.CursoId == cursoId))
+        {
+            _db.CarreraCursos.Add(new CarreraCurso { CarreraId = carreraId, CursoId = cursoId });
+            await _db.SaveChangesAsync();
+        }
+        return await PorCarrera(carreraId);
+    }
+
+    [HttpPost("DesasociarCarrera"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> DesasociarCarrera([FromForm] int carreraId, [FromForm] int cursoId)
+    {
+        var rel = await _db.CarreraCursos.FirstOrDefaultAsync(cc => cc.CarreraId == carreraId && cc.CursoId == cursoId);
+        if (rel != null)
+        {
+            _db.CarreraCursos.Remove(rel);
+            await _db.SaveChangesAsync();
+        }
+        return await PorCarrera(carreraId);
     }
 
     [HttpGet("Create")]
@@ -126,7 +174,6 @@ public class AdminCursosController : Controller
         curso.Cupos = model.Cupos;
         curso.DocenteId = model.DocenteId;
 
-        // Sincroniza las carreras asociadas
         var seleccionadas = model.CarreraIds.Distinct().ToHashSet();
         foreach (var sobrante in curso.CarreraCursos.Where(cc => !seleccionadas.Contains(cc.CarreraId)).ToList())
             curso.CarreraCursos.Remove(sobrante);

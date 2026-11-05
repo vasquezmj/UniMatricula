@@ -1,3 +1,27 @@
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+@{
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    string nombreMostrar = User.Identity?.Name ?? "";
+    if (User.Identity?.IsAuthenticated == true)
+    {
+        if (User.IsInRole("Admin"))
+        {
+            nombreMostrar = "Admin";
+        }
+        else
+        {
+            var appUser = await UserManager.GetUserAsync(User);
+            if (appUser != null && !string.IsNullOrWhiteSpace(appUser.NombreCompleto))
+            {
+                var partesApellidos = (appUser.Apellidos ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                var primerApellido = partesApellidos.FirstOrDefault() ?? "";
+                nombreMostrar = $"{appUser.Nombre} {primerApellido}".Trim();
+            }
+        }
+    }
+}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -8,44 +32,76 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark app-nav">
+    <nav class="navbar navbar-expand-lg navbar-dark app-nav shadow-sm">
         <div class="container">
-            <a class="navbar-brand fw-bold" asp-controller="Home" asp-action="Index">UniMatrícula</a>
+            <a class="navbar-brand fw-bold d-flex align-items-center gap-2" asp-controller="Home" asp-action="Index">
+                <span>UniMatrícula</span>
+            </a>
             @if (User.IsInRole("Admin"))
             {
                 <span class="badge badge-admin me-3">ADMIN</span>
             }
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menu">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menu" aria-label="Alternar menú">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="menu">
                 <ul class="navbar-nav me-auto">
                     @if (User.IsInRole("Admin"))
                     {
-                        <li class="nav-item"><a class="nav-link" asp-controller="AdminPanel" asp-action="Index">Panel</a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="AdminCarreras" asp-action="Index">Carreras</a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="AdminCursos" asp-action="Index">Cursos</a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="AdminDocentes" asp-action="Index">Profesores</a></li>
+                        <li class="nav-item">
+                            <a class="nav-link @(currentController == "AdminPanel" ? "active" : "")" asp-controller="AdminPanel" asp-action="Index">Panel</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(currentController == "AdminCarreras" ? "active" : "")" asp-controller="AdminCarreras" asp-action="Index">Carreras</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(currentController == "AdminCursos" ? "active" : "")" asp-controller="AdminCursos" asp-action="Index">Cursos</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(currentController == "AdminDocentes" ? "active" : "")" href="/Admin/Profesores">Profesores</a>
+                        </li>
                     }
                     else if (User.IsInRole("Estudiante"))
                     {
-                        <li class="nav-item"><a class="nav-link" asp-controller="Estudiante" asp-action="Index">Inicio</a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Carreras" asp-action="Index">Carreras</a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Matricula" asp-action="Index">Matrícula</a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Matricula" asp-action="MisCursos">Mis cursos</a></li>
+                        <li class="nav-item">
+                            <a class="nav-link @(currentController == "Estudiante" ? "active" : "")" asp-controller="Estudiante" asp-action="Index">Inicio</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(currentController == "Carreras" ? "active" : "")" asp-controller="Carreras" asp-action="Index">Carreras</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(currentController == "Matricula" && currentAction == "Index" ? "active" : "")" asp-controller="Matricula" asp-action="Index">Matrícula</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(currentController == "Matricula" && currentAction == "MisCursos" ? "active" : "")" asp-controller="Matricula" asp-action="MisCursos">Mis cursos</a>
+                        </li>
                     }
                 </ul>
                 <ul class="navbar-nav align-items-center">
                     @if (User.Identity?.IsAuthenticated == true)
                     {
-                        <li class="nav-item text-white me-3">@User.Identity.Name</li>
-                        <li class="nav-item">
-                            <form asp-controller="Account" asp-action="Logout" method="post">
-                                <button type="submit" class="btn btn-sm btn-outline-light">Cerrar sesión</button>
-                            </form>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle text-white fw-semibold" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                @nombreMostrar
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li><span class="dropdown-item-text small text-muted">@User.Identity.Name</span></li>
+                                <li><hr class="dropdown-divider" /></li>
+                                <li>
+                                    <form asp-controller="Account" asp-action="Logout" method="post" class="px-2">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger w-100">Cerrar sesión</button>
+                                    </form>
+                                </li>
+                            </ul>
                         </li>
                     }
-                    else
+                    else if (currentController == "Account" && currentAction == "Register")
+                    {
+                        <li class="nav-item">
+                            <a class="btn btn-sm btn-outline-light px-3" asp-controller="Account" asp-action="Login">Iniciar sesión</a>
+                        </li>
+                    }
+                    else if (currentController != "Account")
                     {
                         <li class="nav-item"><a class="nav-link" asp-controller="Account" asp-action="Login">Iniciar sesión</a></li>
                         <li class="nav-item"><a class="nav-link" asp-controller="Account" asp-action="Register">Registrarse</a></li>
@@ -58,22 +114,24 @@
     <main class="container py-4">
         @if (TempData["Ok"] != null)
         {
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
                 @TempData["Ok"]
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
             </div>
         }
         @if (TempData["Error"] != null)
         {
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
                 @TempData["Error"]
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
             </div>
         }
         @RenderBody()
     </main>
 
-    <footer class="text-center text-muted small py-3">UniMatrícula · Proyecto final · SC-601 Programación avanzada</footer>
+    <footer class="text-center text-muted small py-3">
+        UniMatrícula · Proyecto final · SC-601 Programación avanzada · Mauricio Vásquez Loría
+    </footer>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>

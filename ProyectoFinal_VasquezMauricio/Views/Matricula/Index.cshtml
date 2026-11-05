@@ -1,56 +1,237 @@
 @model List<CursoDisponibleViewModel>
 @{ ViewData["Title"] = "Matrícula"; }
-<h1 class="page-title">Cursos disponibles</h1>
-<p class="text-muted">Carrera: <strong>@ViewBag.Carrera</strong></p>
 
-<form method="get" class="row g-2 mb-3">
-    <div class="col-md-4"><input name="q" value="@ViewBag.Q" class="form-control" placeholder="Buscar curso o código…" /></div>
+<h1 class="page-title h3 mb-3">Cursos disponibles · @ViewBag.Carrera</h1>
+
+<form id="filtroForm" method="get" class="row g-2 mb-3 align-items-center">
+    <div class="col-md-4">
+        <input id="fBuscar" name="q" value="@ViewBag.Q" class="form-control" placeholder="Buscar curso…" />
+    </div>
     <div class="col-md-2">
-        <select name="creditos" class="form-select">
+        <select id="fCreditos" name="creditos" class="form-select">
             <option value="">Créditos</option>
             @foreach (var n in new[] { 1, 2, 3, 4, 5, 6 })
             {
-                <option value="@n" selected="@(ViewBag.Creditos == n)">@n</option>
+                <option value="@n" selected="@(ViewBag.Creditos == n)">@n créditos</option>
             }
         </select>
     </div>
     <div class="col-md-2">
-        <select name="tipo" class="form-select">
+        <select id="fTipo" name="tipo" class="form-select">
             <option value="">Tipo</option>
             <option value="Obligatorio" selected="@(ViewBag.Tipo == "Obligatorio")">Obligatorio</option>
             <option value="Electivo" selected="@(ViewBag.Tipo == "Electivo")">Electivo</option>
         </select>
     </div>
-    <div class="col-md-4">
-        <button class="btn btn-primary">Filtrar</button>
-        <a class="btn btn-outline-secondary" asp-action="Index">Limpiar</a>
+    <div class="col-md-4 d-flex gap-2">
+        <button type="button" id="btnLimpiar" class="btn btn-outline-secondary">Limpiar</button>
     </div>
 </form>
 
-@if (!Model.Any())
-{
-    <div class="alert alert-info">No hay cursos disponibles con esos criterios.</div>
-}
-else
-{
-    <form asp-action="Confirmar" method="post">
-        <table class="table table-hover align-middle bg-white">
-            <thead><tr><th></th><th>Código</th><th>Curso</th><th>Créditos</th><th>Tipo</th><th>Docente</th><th>Cupos</th></tr></thead>
-            <tbody>
-            @foreach (var c in Model)
-            {
-                <tr class="@(c.CuposDisponibles <= 0 ? "table-light text-muted" : "")">
-                    <td><input type="checkbox" name="cursoIds" value="@c.Id" class="form-check-input" disabled="@(c.CuposDisponibles <= 0)" /></td>
-                    <td>@c.Codigo</td>
-                    <td>@c.Nombre</td>
-                    <td>@c.Creditos</td>
-                    <td>@c.Tipo</td>
-                    <td>@(c.Docente ?? "Por asignar")</td>
-                    <td>@(c.CuposDisponibles <= 0 ? "Sin cupos" : c.CuposDisponibles.ToString())</td>
-                </tr>
+<form asp-action="Confirmar" method="post" id="formMatricula">
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle bg-white border mb-2" id="tablaCursos">
+                    <thead>
+                        <tr>
+                            <th style="width:42px"></th>
+                            <th>Código</th>
+                            <th>Curso</th>
+                            <th>Cr.</th>
+                            <th>Tipo</th>
+                            <th>Docente</th>
+                            <th>Cupos</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyCursos">
+                        @if (!Model.Any())
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">No hay cursos disponibles con esos criterios.</td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var c in Model)
+                            {
+                                var sinCupo = c.CuposDisponibles <= 0;
+                                <tr class="@(sinCupo ? "table-light text-muted" : "")"
+                                    data-id="@c.Id"
+                                    data-nombre="@c.Nombre"
+                                    data-creditos="@c.Creditos"
+                                    data-cupos="@c.CuposDisponibles">
+                                    <td>
+                                        <input type="checkbox" name="cursoIds" value="@c.Id"
+                                               class="form-check-input chk-curso"
+                                               data-nombre="@c.Nombre"
+                                               data-creditos="@c.Creditos"
+                                               disabled="@sinCupo" />
+                                    </td>
+                                    <td class="fw-semibold">@c.Codigo</td>
+                                    <td>@c.Nombre</td>
+                                    <td>@c.Creditos</td>
+                                    <td>@c.Tipo</td>
+                                    <td>@(c.Docente ?? "Por asignar")</td>
+                                    <td>@(sinCupo ? "0" : c.CuposDisponibles.ToString())</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <p class="ajax-hint mb-0">Filtros por AJAX: la lista se actualiza sin recargar la página</p>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card p-4 resumen-card">
+                <h2 class="h5 fw-bold page-title mb-3">Resumen</h2>
+                <ul id="resumenLista" class="list-unstyled mb-3">
+                    <li class="text-muted small">Marca los cursos que deseas inscribir.</li>
+                </ul>
+                <div class="border-top pt-3 mb-3">
+                    <div id="resumenTotales" class="fw-bold" style="color:var(--navy)">0 cursos · 0 créditos</div>
+                    <div id="resumenSinCupos" class="text-danger small mt-1">
+                        @{
+                            var agotados = Model.Where(x => x.CuposDisponibles <= 0).Select(x => $"{x.Nombre}: sin cupos").ToList();
+                            if (agotados.Any())
+                            {
+                                @string.Join(" · ", agotados)
+                            }
+                        }
+                    </div>
+                </div>
+                <button type="submit" id="btnConfirmar" class="btn btn-accent w-100 py-2">Confirmar matrícula</button>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+    (function () {
+        const seleccionados = new Map(); // id -> { nombre, creditos }
+
+        function actualizarResumen() {
+            const lista = document.getElementById('resumenLista');
+            const totales = document.getElementById('resumenTotales');
+            lista.innerHTML = '';
+
+            let totalCreditos = 0;
+            seleccionados.forEach((info) => {
+                totalCreditos += info.creditos;
+                const li = document.createElement('li');
+                li.className = 'mb-1';
+                li.textContent = '• ' + info.nombre;
+                lista.appendChild(li);
+            });
+
+            if (seleccionados.size === 0) {
+                lista.innerHTML = '<li class="text-muted small">Marca los cursos que deseas inscribir.</li>';
             }
-            </tbody>
-        </table>
-        <button type="submit" class="btn btn-accent">Confirmar matrícula</button>
-    </form>
+
+            const n = seleccionados.size;
+            totales.textContent = `${n} ${n === 1 ? 'curso' : 'cursos'} · ${totalCreditos} créditos`;
+        }
+
+        function enlazarCheckboxes() {
+            document.querySelectorAll('.chk-curso').forEach(chk => {
+                const id = parseInt(chk.value, 10);
+                if (seleccionados.has(id)) {
+                    chk.checked = true;
+                }
+                chk.addEventListener('change', function () {
+                    if (this.checked) {
+                        seleccionados.set(id, {
+                            nombre: this.dataset.nombre,
+                            creditos: parseInt(this.dataset.creditos, 10) || 0
+                        });
+                    } else {
+                        seleccionados.delete(id);
+                    }
+                    actualizarResumen();
+                });
+            });
+        }
+
+        async function filtrarAjax() {
+            const q = document.getElementById('fBuscar').value;
+            const creditos = document.getElementById('fCreditos').value;
+            const tipo = document.getElementById('fTipo').value;
+            const params = new URLSearchParams();
+            if (q) params.set('q', q);
+            if (creditos) params.set('creditos', creditos);
+            if (tipo) params.set('tipo', tipo);
+
+            const res = await fetch('/Matricula?' + params.toString(), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+
+            const tbody = document.getElementById('tbodyCursos');
+            const sinCuposDiv = document.getElementById('resumenSinCupos');
+            tbody.innerHTML = '';
+            const agotados = [];
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No hay cursos disponibles con esos criterios.</td></tr>';
+            } else {
+                data.forEach(c => {
+                    const sinCupo = c.cuposDisponibles <= 0;
+                    if (sinCupo) agotados.push(`${c.nombre}: sin cupos`);
+                    const tr = document.createElement('tr');
+                    if (sinCupo) tr.className = 'table-light text-muted';
+                    tr.innerHTML = `
+                        <td>
+                            <input type="checkbox" name="cursoIds" value="${c.id}"
+                                   class="form-check-input chk-curso"
+                                   data-nombre="${c.nombre}"
+                                   data-creditos="${c.creditos}"
+                                   ${sinCupo ? 'disabled' : ''} />
+                        </td>
+                        <td class="fw-semibold">${c.codigo}</td>
+                        <td>${c.nombre}</td>
+                        <td>${c.creditos}</td>
+                        <td>${c.tipo}</td>
+                        <td>${c.docente || 'Por asignar'}</td>
+                        <td>${sinCupo ? '0' : c.cuposDisponibles}</td>`;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            sinCuposDiv.textContent = agotados.join(' · ');
+            enlazarCheckboxes();
+        }
+
+        let timer;
+        document.getElementById('fBuscar').addEventListener('input', () => {
+            clearTimeout(timer);
+            timer = setTimeout(filtrarAjax, 200);
+        });
+        document.getElementById('fCreditos').addEventListener('change', filtrarAjax);
+        document.getElementById('fTipo').addEventListener('change', filtrarAjax);
+        document.getElementById('btnLimpiar').addEventListener('click', () => {
+            document.getElementById('fBuscar').value = '';
+            document.getElementById('fCreditos').value = '';
+            document.getElementById('fTipo').value = '';
+            filtrarAjax();
+        });
+
+        // Asegurar que al enviar el formulario se incluyan los cursos seleccionados aunque estén filtrados
+        document.getElementById('formMatricula').addEventListener('submit', function () {
+            seleccionados.forEach((_, id) => {
+                if (!this.querySelector(`input[name="cursoIds"][value="${id}"]`)) {
+                    const hidden = document.createElement('input');
+                    hidden.type = 'hidden';
+                    hidden.name = 'cursoIds';
+                    hidden.value = id;
+                    this.appendChild(hidden);
+                }
+            });
+        });
+
+        enlazarCheckboxes();
+    })();
+</script>
 }
