@@ -1,27 +1,130 @@
 @model List<Docente>
-@{ ViewData["Title"] = "Profesores"; }
+@{
+    ViewData["Title"] = "Profesores";
+    var carreras = (List<Carrera>)ViewBag.Carreras;
+    var cursos = (List<Curso>)ViewBag.Cursos;
+    var recientes = (List<string>)ViewBag.AsignacionesRecientes;
+}
+
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="page-title mb-0">Profesores</h1>
+    <h1 class="page-title h3 mb-0">Profesores</h1>
     <a class="btn btn-accent" asp-action="Create">+ Nuevo profesor</a>
 </div>
-<table class="table align-middle bg-white">
-    <thead><tr><th>Nombre</th><th>Correo</th><th>Especialidad</th><th>Cursos asignados</th><th></th></tr></thead>
-    <tbody>
-    @foreach (var d in Model)
-    {
-        <tr>
-            <td>@d.Nombre</td>
-            <td>@d.Correo</td>
-            <td>@d.Especialidad</td>
-            <td>@(d.Cursos.Any() ? string.Join(", ", d.Cursos.Select(c => c.Codigo)) : "—")</td>
-            <td class="text-end">
-                <a class="btn btn-outline-primary btn-sm" asp-action="Edit" asp-route-id="@d.Id">Editar</a>
-                <form asp-action="Delete" asp-route-id="@d.Id" method="post" class="d-inline" onsubmit="return confirm('¿Eliminar este profesor?');">
-                    <button class="btn btn-outline-danger btn-sm">Eliminar</button>
-                </form>
-            </td>
-        </tr>
-    }
-    </tbody>
-</table>
-<p class="text-muted small">Para asignar un profesor a un curso, edita el curso en la sección <a asp-controller="AdminCursos" asp-action="Index">Cursos</a>.</p>
+
+<div id="alertaAsignacion" class="alert d-none" role="alert"></div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="table-responsive">
+            <table class="table align-middle bg-white border mb-2">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Correo</th>
+                        <th>Especialidad</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var d in Model)
+                {
+                    <tr>
+                        <td class="fw-semibold">@d.Nombre</td>
+                        <td>@d.Correo</td>
+                        <td>@d.Especialidad</td>
+                        <td class="text-end text-nowrap">
+                            <a class="btn btn-outline-primary btn-sm" asp-action="Edit" asp-route-id="@d.Id">Editar</a>
+                            <form asp-action="Delete" asp-route-id="@d.Id" method="post" class="d-inline" onsubmit="return confirm('¿Eliminar este profesor?');">
+                                <button class="btn btn-outline-danger btn-sm">Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <p class="ajax-hint mb-0" id="textoRecientes">
+            Asignaciones recientes: @(recientes.Any() ? string.Join(" · ", recientes) : "Ninguna")
+        </p>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card p-4 resumen-card">
+            <h2 class="h5 fw-bold page-title mb-3">Asignar profesor</h2>
+            <form id="formAsignarProfesor" asp-action="Asignar" method="post">
+                @Html.AntiForgeryToken()
+                <div class="mb-3">
+                    <label for="selProfesor" class="form-label fw-semibold">Profesor</label>
+                    <select id="selProfesor" name="docenteId" class="form-select" required>
+                        @foreach (var d in Model)
+                        {
+                            <option value="@d.Id">@d.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="selCarreraProf" class="form-label fw-semibold">Carrera</label>
+                    <select id="selCarreraProf" class="form-select">
+                        <option value="">Todas las carreras</option>
+                        @foreach (var car in carreras)
+                        {
+                            <option value="@car.Id">@car.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="selCursoProf" class="form-label fw-semibold">Curso</label>
+                    <select id="selCursoProf" name="cursoId" class="form-select" required>
+                        @foreach (var cur in cursos)
+                        {
+                            var carrerasIds = string.Join(",", cur.CarreraCursos.Select(cc => cc.CarreraId));
+                            <option value="@cur.Id" data-carreras="@carrerasIds">@cur.Nombre (@cur.Codigo)</option>
+                        }
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 mb-2">Asignar</button>
+                <p class="text-muted small mb-0">El docente asignado aparece en la lista de cursos del estudiante</p>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    (function () {
+        const selCarrera = document.getElementById('selCarreraProf');
+        const selCurso = document.getElementById('selCursoProf');
+        const opcionesCurso = Array.from(selCurso.options);
+        const form = document.getElementById('formAsignarProfesor');
+        const alerta = document.getElementById('alertaAsignacion');
+        const textoRecientes = document.getElementById('textoRecientes');
+
+        selCarrera.addEventListener('change', function () {
+            const cid = this.value;
+            selCurso.innerHTML = '';
+            opcionesCurso.forEach(opt => {
+                const lista = (opt.dataset.carreras || '').split(',');
+                if (!cid || lista.includes(cid)) {
+                    selCurso.appendChild(opt.cloneNode(true));
+                }
+            });
+        });
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const fd = new FormData(form);
+            const res = await fetch('/Admin/Profesores/Asignar', {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: fd
+            });
+            const json = await res.json();
+            alerta.className = `alert ${res.ok ? 'alert-success' : 'alert-danger'} py-2`;
+            alerta.textContent = json.mensaje;
+            if (res.ok && json.recientes) {
+                textoRecientes.textContent = 'Asignaciones recientes: ' + json.recientes.join(' · ');
+            }
+        });
+    })();
+</script>
+}

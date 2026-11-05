@@ -20,7 +20,10 @@ public class EstudianteController : Controller
         _db = db;
     }
 
-    // Panel principal del estudiante (HU-09)
+    // Panel principal del estudiante (HU-09) - soporta /Estudiante y /Estudiante/Inicio
+    [HttpGet("/Estudiante")]
+    [HttpGet("/Estudiante/Index")]
+    [HttpGet("/Estudiante/Inicio")]
     public async Task<IActionResult> Index()
     {
         var userId = _userManager.GetUserId(User)!;
@@ -31,12 +34,18 @@ public class EstudianteController : Controller
             .Select(m => m.Curso!.Creditos)
             .ToListAsync();
 
+        var primerNombre = string.IsNullOrWhiteSpace(user.Nombre)
+            ? user.NombreCompleto
+            : user.Nombre.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? user.Nombre;
+
         return View(new EstudiantePanelViewModel
         {
+            Nombre = primerNombre,
             NombreCompleto = user.NombreCompleto,
             Carrera = user.Carrera?.Nombre,
             Creditos = matriculas.Sum(),
-            Cursos = matriculas.Count
+            Cursos = matriculas.Count,
+            Periodo = "III-2026"
         });
     }
 }

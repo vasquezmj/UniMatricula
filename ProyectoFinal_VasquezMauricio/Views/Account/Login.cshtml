@@ -1,26 +1,44 @@
 @model LoginViewModel
 @{ ViewData["Title"] = "Iniciar sesión"; }
-<div class="card auth-card p-4">
-    <h1 class="page-title h3">Bienvenido de nuevo</h1>
-    <p class="text-muted">Ingresa con tu cuenta para continuar</p>
-    <form asp-action="Login" asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post">
-        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-        <div class="mb-3">
-            <label asp-for="Email" class="form-label"></label>
-            <input asp-for="Email" class="form-control" autocomplete="username" />
-            <span asp-validation-for="Email" class="text-danger"></span>
+
+<div class="card login-split-card shadow-sm">
+    <div class="row g-0">
+        <div class="col-md-5 login-brand-pane">
+            <h2 class="h3 fw-bold mb-2">UniMatrícula</h2>
+            <p class="mb-0 text-white-50">Elige tu carrera y matricula tus cursos en pocos pasos.</p>
+            <div class="login-brand-icon" aria-hidden="true">🎓</div>
         </div>
-        <div class="mb-3">
-            <label asp-for="Password" class="form-label"></label>
-            <input asp-for="Password" class="form-control" autocomplete="current-password" />
-            <span asp-validation-for="Password" class="text-danger"></span>
+        <div class="col-md-7 p-4 p-lg-5 bg-white">
+            <h1 class="page-title h3 mb-1">Bienvenido de nuevo</h1>
+            <p class="text-muted mb-4">Ingresa con tu cuenta para continuar</p>
+
+            <form asp-action="Login" asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+                <div class="mb-3">
+                    <label asp-for="Email" class="form-label fw-semibold">Correo electrónico</label>
+                    <input asp-for="Email" class="form-control" placeholder="nombre@correo.com" autocomplete="username" />
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Password" class="form-label fw-semibold">Contraseña</label>
+                    <input asp-for="Password" class="form-control" placeholder="••••••••" autocomplete="current-password" />
+                    <span asp-validation-for="Password" class="text-danger small"></span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="form-check mb-0">
+                        <input asp-for="RememberMe" class="form-check-input" />
+                        <label asp-for="RememberMe" class="form-check-label">Recordarme</label>
+                    </div>
+                    <a href="#olvido" class="small text-decoration-none" onclick="alert('Para restablecer tu contraseña, contacta al departamento de Registro Universitario (soporte@unimatricula.edu).'); return false;">¿Olvidaste tu contraseña?</a>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 py-2">Iniciar sesión</button>
+            </form>
+
+            <p class="mt-4 mb-0 text-center small">
+                ¿No tienes cuenta? <a asp-action="Register" class="fw-semibold">Regístrate</a>
+            </p>
         </div>
-        <div class="form-check mb-3">
-            <input asp-for="RememberMe" class="form-check-input" />
-            <label asp-for="RememberMe" class="form-check-label"></label>
-        </div>
-        <button type="submit" class="btn btn-primary w-100">Iniciar sesión</button>
-    </form>
-    <p class="mt-3 text-center">¿No tienes cuenta? <a asp-action="Register">Regístrate</a></p>
+    </div>
 </div>
+
 @section Scripts { <partial name="_ValidationScriptsPartial" /> }

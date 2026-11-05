@@ -6,8 +6,9 @@ using ProyectoFinal.Models;
 
 namespace ProyectoFinal.Controllers;
 
-/// <summary>CRUD de docentes para el administrador (HU-14). La asignación a cursos se hace en el formulario del curso (HU-15).</summary>
+/// <summary>CRUD de docentes y asignación a cursos (HU-14, HU-15).</summary>
 [Authorize(Policy = "SoloAdmin")]
+[Route("Admin/Profesores")]
 [Route("Admin/Docentes")]
 public class AdminDocentesController : Controller
 {
@@ -18,7 +19,54 @@ public class AdminDocentesController : Controller
     public async Task<IActionResult> Index()
     {
         var docentes = await _db.Docentes.Include(d => d.Cursos).OrderBy(d => d.Nombre).ToListAsync();
+        var carreras = await _db.Carreras.OrderBy(c => c.Nombre).ToListAsync();
+        var cursos = await _db.Cursos
+            .Include(c => c.Docente)
+            .Include(c => c.CarreraCursos)
+            .OrderBy(c => c.Codigo)
+            .ToListAsync();
+
+        ViewBag.Carreras = carreras;
+        ViewBag.Cursos = cursos;
+        ViewBag.AsignacionesRecientes = cursos
+            .Where(c => c.Docente != null)
+            .Take(4)
+            .Select(c => $"{c.Codigo} → {c.Docente!.Nombre}")
+            .ToList();
+
         return View(docentes);
+    }
+
+    [HttpPost("Asignar"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> Asignar(int docenteId, int cursoId)
+    {
+        var curso = await _db.Cursos.FindAsync(cursoId);
+        var docente = await _db.Docentes.FindAsync(docenteId);
+        if (curso == null || docente == null)
+        {
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                return BadRequest(new { ok = false, mensaje = "Selecciona un profesor y un curso válidos." });
+            TempData["Error"] = "Selecciona un profesor y un curso válidos.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        curso.DocenteId = docente.Id;
+        await _db.SaveChangesAsync();
+
+        if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+        {
+            var recientes = await _db.Cursos
+                .Include(c => c.Docente)
+                .Where(c => c.Docente != null)
+                .OrderBy(c => c.Codigo)
+                .Take(4)
+                .Select(c => $"{c.Codigo} → {c.Docente!.Nombre}")
+                .ToListAsync();
+            return Json(new { ok = true, mensaje = $"Profesor {docente.Nombre} asignado a {curso.Codigo} ({curso.Nombre}).", recientes });
+        }
+
+        TempData["Ok"] = $"Profesor {docente.Nombre} asignado al curso {curso.Nombre}.";
+        return RedirectToAction(nameof(Index));
     }
 
     [HttpGet("Create")]
@@ -34,7 +82,7 @@ public class AdminDocentesController : Controller
 
         _db.Docentes.Add(docente);
         await _db.SaveChangesAsync();
-        TempData["Ok"] = "Docente registrado correctamente.";
+        TempData["Ok"] = "Profesor registrado correctamente.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -62,7 +110,7 @@ public class AdminDocentesController : Controller
         actual.Correo = docente.Correo;
         actual.Especialidad = docente.Especialidad;
         await _db.SaveChangesAsync();
-        TempData["Ok"] = "Docente actualizado correctamente.";
+        TempData["Ok"] = "Profesor actualizado correctamente.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -72,9 +120,9 @@ public class AdminDocentesController : Controller
         var docente = await _db.Docentes.FindAsync(id);
         if (docente == null) return NotFound();
 
-        _db.Docentes.Remove(docente); // los cursos quedan sin docente (SetNull)
+        _db.Docentes.Remove(docente);
         await _db.SaveChangesAsync();
-        TempData["Ok"] = "Docente eliminado correctamente.";
+        TempData["Ok"] = "Profesor eliminado correctamente.";
         return RedirectToAction(nameof(Index));
     }
 }
