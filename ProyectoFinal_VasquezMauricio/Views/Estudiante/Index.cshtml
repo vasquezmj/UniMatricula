@@ -1,0 +1,26 @@
+@model EstudiantePanelViewModel
+@{ ViewData["Title"] = "Inicio"; }
+<h1 class="page-title">Hola, @Model.NombreCompleto</h1>
+@if (Model.Carrera != null)
+{
+    <span class="badge text-bg-light border mb-3">@Model.Carrera</span>
+}
+else
+{
+    <div class="alert alert-warning">Aún no tienes carrera. <a asp-controller="Carreras" asp-action="Index">Selecciona una</a>.</div>
+}
+<div class="row g-3 mb-4">
+    <div class="col-md-4"><div class="card p-3"><div class="stat">@Model.Creditos</div><div class="text-muted">Créditos matriculados</div></div></div>
+    <div class="col-md-4"><div class="card p-3"><div class="stat">@Model.Cursos</div><div class="text-muted">Cursos inscritos</div></div></div>
+    <div class="col-md-4"><div class="card p-3"><div class="stat">@DateTime.Now.Year</div><div class="text-muted">Periodo</div></div></div>
+</div>
+<div class="row g-3">
+    <div class="col-md-6"><div class="card p-4 text-bg-primary h-100">
+        <h2 class="h5">Matricular cursos</h2><p>Ver los cursos de mi carrera y matricularlos</p>
+        <div><a class="btn btn-accent" asp-controller="Matricula" asp-action="Index">Ir a matrícula</a></div>
+    </div></div>
+    <div class="col-md-6"><div class="card p-4 h-100">
+        <h2 class="h5">Mis cursos</h2><p>Consultar los cursos que ya inscribí</p>
+        <div><a class="btn btn-primary" asp-controller="Matricula" asp-action="MisCursos">Ver mis cursos</a></div>
+    </div></div>
+</div>

@@ -1,0 +1,67 @@
+@model List<Curso>
+@{ ViewData["Title"] = "Cursos"; int pagina = ViewBag.Pagina; int total = ViewBag.TotalPaginas; }
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="page-title mb-0">Cursos</h1>
+    <a class="btn btn-accent" asp-action="Create">+ Nuevo curso</a>
+</div>
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-4"><input name="q" value="@ViewBag.Q" class="form-control" placeholder="Buscar curso o código…" /></div>
+    <div class="col-md-2">
+        <select name="creditos" class="form-select">
+            <option value="">Créditos</option>
+            @foreach (var n in new[] { 1, 2, 3, 4, 5, 6 })
+            {
+                <option value="@n" selected="@(ViewBag.Creditos == n)">@n</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select name="tipo" class="form-select">
+            <option value="">Tipo</option>
+            <option value="Obligatorio" selected="@(ViewBag.Tipo == "Obligatorio")">Obligatorio</option>
+            <option value="Electivo" selected="@(ViewBag.Tipo == "Electivo")">Electivo</option>
+        </select>
+    </div>
+    <div class="col-md-4">
+        <button class="btn btn-primary">Filtrar</button>
+        <a class="btn btn-outline-secondary" asp-action="Index">Limpiar</a>
+    </div>
+</form>
+<table class="table align-middle bg-white">
+    <thead><tr><th>Código</th><th>Curso</th><th>Créd.</th><th>Tipo</th><th>Cupos</th><th>Docente</th><th>Carreras</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var c in Model)
+    {
+        <tr>
+            <td>@c.Codigo</td>
+            <td>@c.Nombre</td>
+            <td>@c.Creditos</td>
+            <td>@c.Tipo</td>
+            <td>@c.Cupos</td>
+            <td>@(c.Docente?.Nombre ?? "—")</td>
+            <td>@(c.CarreraCursos.Any() ? string.Join(", ", c.CarreraCursos.Select(cc => cc.Carrera!.Nombre)) : "—")</td>
+            <td class="text-end text-nowrap">
+                <a class="btn btn-outline-primary btn-sm" asp-action="Edit" asp-route-id="@c.Id">Editar</a>
+                <form asp-action="Delete" asp-route-id="@c.Id" method="post" class="d-inline" onsubmit="return confirm('¿Eliminar este curso?');">
+                    <button class="btn btn-outline-danger btn-sm">Eliminar</button>
+                </form>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+@if (!Model.Any())
+{
+    <div class="alert alert-info">No se encontraron cursos.</div>
+}
+@if (total > 1)
+{
+    <nav><ul class="pagination">
+        @for (int i = 1; i <= total; i++)
+        {
+            <li class="page-item @(i == pagina ? "active" : "")">
+                <a class="page-link" asp-action="Index" asp-route-q="@ViewBag.Q" asp-route-creditos="@ViewBag.Creditos" asp-route-tipo="@ViewBag.Tipo" asp-route-pagina="@i">@i</a>
+            </li>
+        }
+    </ul></nav>
+}

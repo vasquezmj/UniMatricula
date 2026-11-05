@@ -1,0 +1,14 @@
+:root { --navy:#1F2A5A; --amber:#F2A900; --soft:#EEF1F9; }
+body { background:#F4F6FB; color:#222B45; }
+.app-nav { background:var(--navy); }
+.badge-admin { background:var(--amber); color:var(--navy); }
+.btn-primary { background:var(--navy); border-color:var(--navy); }
+.btn-primary:hover { background:#16204a; border-color:#16204a; }
+.btn-accent { background:var(--amber); border-color:var(--amber); color:var(--navy); font-weight:600; }
+.btn-accent:hover { background:#d99700; border-color:#d99700; color:var(--navy); }
+.card { border-color:#D5DAEA; border-radius:.75rem; }
+.page-title { color:var(--navy); font-weight:700; }
+.stat { font-size:2rem; font-weight:700; color:var(--navy); }
+.table thead { background:var(--navy); color:#fff; }
+.carrera-card.selected { border-color:var(--amber); background:#FFF4D6; }
+.auth-card { max-width:460px; margin:2rem auto; }

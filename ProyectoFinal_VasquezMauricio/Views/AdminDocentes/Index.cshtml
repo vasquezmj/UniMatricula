@@ -1,0 +1,27 @@
+@model List<Docente>
+@{ ViewData["Title"] = "Profesores"; }
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="page-title mb-0">Profesores</h1>
+    <a class="btn btn-accent" asp-action="Create">+ Nuevo profesor</a>
+</div>
+<table class="table align-middle bg-white">
+    <thead><tr><th>Nombre</th><th>Correo</th><th>Especialidad</th><th>Cursos asignados</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var d in Model)
+    {
+        <tr>
+            <td>@d.Nombre</td>
+            <td>@d.Correo</td>
+            <td>@d.Especialidad</td>
+            <td>@(d.Cursos.Any() ? string.Join(", ", d.Cursos.Select(c => c.Codigo)) : "—")</td>
+            <td class="text-end">
+                <a class="btn btn-outline-primary btn-sm" asp-action="Edit" asp-route-id="@d.Id">Editar</a>
+                <form asp-action="Delete" asp-route-id="@d.Id" method="post" class="d-inline" onsubmit="return confirm('¿Eliminar este profesor?');">
+                    <button class="btn btn-outline-danger btn-sm">Eliminar</button>
+                </form>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+<p class="text-muted small">Para asignar un profesor a un curso, edita el curso en la sección <a asp-controller="AdminCursos" asp-action="Index">Cursos</a>.</p>
